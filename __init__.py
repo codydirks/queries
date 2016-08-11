@@ -16,4 +16,5 @@ class SlipyError(Exception):
     pass
 
 # exposed modules
-from .SLiPy import Mast, Simbad#,Observatory
+from . import Mast, Simbad,Observatory
+#__all__ = ['Mast','Simbad','Observatory']

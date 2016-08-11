@@ -1,6 +1,6 @@
 # Copyright (c) Geoffrey Lentner 2015. All Rights Reserved.
 # See LICENSE (GPLv3).
-# slipy/Framework/Interface.py 
+# slipy/Framework/Interface.py
 """
 Command line interface tools.
 """
