@@ -208,40 +208,47 @@ def GetIUEDataset(dataset):
 	return wav,flux,flux_std_dev
 
 def STISSearch(**kwargs):
-	dataset='hst'
-	try:
-		opts=Options(kwargs,
-		{
-			'target' : '',
-			'ra'     : '',
-			'dec'    : '',
-			'radius' : '3.0',#radius must be in arcmins
-			'config' : 'STIS/FUV-MAMA',#defaults is short wav camera only
-			'grating': 'E140H',
-			'mx'     : 100
-		})
-		target=opts('target')
-		ra=opts('ra')
-		dec=opts('dec')
-		radius=opts('radius')
-		config=opts('config')
-		mx=str(opts('mx'))
-		grating=opts('grating')
-	except OptionsError as err:
-		print('\n --> OptionsError:')
-		raise SimbadError('Simbad.Query was not constructed')
-	critstring=''
-	critstring+='selectedColumnsCSV=sci_data_set_name,sci_targname,sci_ra,sci_dec,sci_actual_duration,sci_spec_1234,sci_central_wavelength,ang_sep&'
-	critstring+='sci_instrume=STIS&sci_instrument_config='+config+'&sci_spec_1234='+grating+'&'
-	if target != '':
-		critstring += 'target='+target
-	elif ra != '' and dec != '':
-		critstring += 'ra='+ra+'&dec='+dec
-	else:
-		raise MastError('Need to Provide RA/DEC or target!')
-	critstring += '&radius='+radius
-	query=MastQuery(dataset, critstring)
-	if query.data.strip() != 'no rows found':
-		return [x.split(',') for x in query.data.split('\n')[2:]]
-	else:
-		return []
+    dataset='hst'
+    try:
+        opts=Options(kwargs,
+        {
+        	'target'  : '',
+        	'ra'      : '',
+        	'dec'     : '',
+        	'radius'  : '3.0',#radius must be in arcmins
+        	'config'  : 'STIS/FUV-MAMA',#defaults is short wav camera only
+        	'grating' : 'E140H',
+            'obs_type': 'S', # S or C for science or calibration, % for both
+            'status'  : '%', # Public or Proprietary, % for both
+        	'mx'      : 100
+        })
+        target=opts('target')
+        ra=opts('ra')
+        dec=opts('dec')
+        radius=opts('radius')
+        config=opts('config')
+        obs_type=opts('obs_type')
+        sci_status=opts('status')
+        mx=str(opts('mx'))
+        grating=opts('grating')
+    except OptionsError as err:
+        print('\n --> OptionsError:')
+        raise SimbadError('Simbad.Query was not constructed')
+    if grating in ('E140H', 'E140M'):
+        config='STIS/FUV-MAMA'
+    elif grating in ('E230H','E230M'):
+        config='STIS/NUV-MAMA'
+    critstring=''
+    critstring+='selectedColumnsCSV=sci_data_set_name,sci_targname,sci_ra,sci_dec,sci_actual_duration,sci_spec_1234,sci_central_wavelength,ang_sep&'
+    critstring+='sci_instrume=STIS&sci_instrument_config='+config+'&sci_spec_1234='+grating+'&sci_status='+sci_status+'&sci_aec='+obs_type
+    if target != '':
+    	critstring += '&target='+target
+    elif ra != '' and dec != '':
+    	critstring += '&ra='+ra+'&dec='+dec
+    if target != '' and ra != '' and dec != '':
+        critstring += '&radius='+radius
+    query=MastQuery(dataset, critstring)
+    if query.data.strip() != 'no rows found':
+        return [x.split(',') for x in query.data.split('\n')[2:]]
+    else:
+        return []
