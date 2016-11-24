@@ -447,10 +447,10 @@ def CritSearch(critstring, **kwargs):
             {
                 'mx'       : 100,
                 'mode'     :'LIST',
-                'fulldata' : False
+                'full'     : False
             })
         mode=opts('mode').upper()
-        fulldata=opts('fulldata')
+        fulldata=opts('full')
     except URLError as error:
         raise SimbadError('Failed to contact SIMBAD database for')
     if mode=='COUNT':

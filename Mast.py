@@ -50,6 +50,24 @@ def MastScript(instrument,criteria,**kwargs):
 		]
 	return ''.join(script)
 
+class STISDataset:
+    def __init__(self, info_string):
+        data=info_string.split(',')
+        self.dataset=data[0]
+        self.target=data[1]
+        self.ra=float(data[2])
+        self.dec=float(data[3])
+        self.exptime=float(data[4])
+        self.grating=data[5]
+        self.cenwav=float(data[6])
+        if len(data)==8:
+            self.angsep=float(data[7])
+
+    def __repr__(self):
+        return self.dataset+'|'+self.target
+    def __str__(self):
+        return self.dataset+'|'+self.target
+
 class MastQuery:
     def __init__(self, instrument, criteria, default=float, **kwargs):
         if type(instrument) is not str and type(criteria) is not str:
@@ -208,6 +226,10 @@ def GetIUEDataset(dataset):
 	return wav,flux,flux_std_dev
 
 def STISSearch(**kwargs):
+    """
+    Inputs: Series of potential search parameters
+    Returns a list of STISDataset objects
+    """
     dataset='hst'
     try:
         opts=Options(kwargs,
@@ -233,7 +255,7 @@ def STISSearch(**kwargs):
         grating=opts('grating')
     except OptionsError as err:
         print('\n --> OptionsError:')
-        raise SimbadError('Simbad.Query was not constructed')
+        raise MastError('Mast query was not constructed')
     if grating in ('E140H', 'E140M'):
         config='STIS/FUV-MAMA'
     elif grating in ('E230H','E230M'):
@@ -241,6 +263,15 @@ def STISSearch(**kwargs):
     critstring=''
     critstring+='selectedColumnsCSV=sci_data_set_name,sci_targname,sci_ra,sci_dec,sci_actual_duration,sci_spec_1234,sci_central_wavelength,ang_sep&'
     critstring+='sci_instrume=STIS&sci_instrument_config='+config+'&sci_spec_1234='+grating+'&sci_status='+sci_status+'&sci_aec='+obs_type
+    print ra, dec
+    # Error checking search parameters
+    if (ra != '' and dec == '') or (ra == '' and dec != ''):
+        raise MastError('Need to specify both RA/DEC')
+    if (target != '' or ra != '' or dec != '') and radius == '':
+        raise MastError('Need to specify search radius.')
+    #if radius != '' and (target=='' and ra=='' and dec==''):
+    #    raise MastError('Need to specify target or RA/DEC when specifying radius.')
+
     if target != '':
     	critstring += '&target='+target
     elif ra != '' and dec != '':
@@ -249,6 +280,6 @@ def STISSearch(**kwargs):
         critstring += '&radius='+radius
     query=MastQuery(dataset, critstring)
     if query.data.strip() != 'no rows found':
-        return [x.split(',') for x in query.data.split('\n')[2:]]
+        return [STISDataset(x) for x in query.data.split('\n')[2:]]
     else:
         return []
