@@ -62,6 +62,8 @@ class STISDataset:
         self.cenwav=float(data[6])
         if len(data)==8:
             self.angsep=float(data[7])
+        else:
+            self.angsep=float('nan')
 
     def __repr__(self):
         return self.dataset+'|'+self.target
