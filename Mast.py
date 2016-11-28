@@ -265,7 +265,6 @@ def STISSearch(**kwargs):
     critstring=''
     critstring+='selectedColumnsCSV=sci_data_set_name,sci_targname,sci_ra,sci_dec,sci_actual_duration,sci_spec_1234,sci_central_wavelength,ang_sep&'
     critstring+='sci_instrume=STIS&sci_instrument_config='+config+'&sci_spec_1234='+grating+'&sci_status='+sci_status+'&sci_aec='+obs_type
-    print ra, dec
     # Error checking search parameters
     if (ra != '' and dec == '') or (ra == '' and dec != ''):
         raise MastError('Need to specify both RA/DEC')
