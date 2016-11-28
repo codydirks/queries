@@ -471,8 +471,7 @@ class SimbadObject(object):
         self.objecttype=data[2]
         self.ra=float(coord_string.split(' ')[0])
         self.dec=float(coord_string.split(' ')[1])
-        if 'pm' in hdrs:
-            pms=data[hdrs.index('pm')].split(' ')
+        if 'pm' in hdrs and '~' not in data[hdrs.index('pm')].split(' '):
             self.pm_ra = float(pms[0])
             self.pm_dec= float(pms[1])
         else:
