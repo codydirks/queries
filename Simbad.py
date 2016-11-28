@@ -319,7 +319,10 @@ def CritURLEncoded(url):
         encoded[character] if character in encoded else character
         for character in list(url)])
 
-def CritScript(critstring, outputmode='list', mx=100):
+
+# Would like to add options to this to choose returned output.
+# Being able to select proper motions, parallaxes, etc would be nice
+def CritScript(critstring, outputmode='list', mx=100, get_fluxes=True, get_pms=False, get_plx=False):
     mx = int(mx)
     if outputmode.upper() not in ('LIST','COUNT'):
         raise SimbadError('Output mode must be LIST or COUNT!')
@@ -327,11 +330,23 @@ def CritScript(critstring, outputmode='list', mx=100):
     script = [
         'http://simbad.u-strasbg.fr/simbad/sim-sam?',
         'output.format=ASCII&list.idopt=CATLIST&list.idcat=HD', #select HD cat names
-        '&list.fluxsel=on&U=off&R=off&B=on&V=on', #format list flux/mag display
         '&list.bibsel=off&list.notesel=off&obj.bibsel=off&obj.notesel=off', #hide bib and notes
         '&coodisp1=[d][2]',#coordinate output format
         '&Criteria=',CritURLEncoded(critstring),
         '&OutputMode=',outputmode,'&maxObject=',str(mx)]
+    if get_fluxes:
+        script.append('&list.fluxsel=on&U=off&R=off&B=on&V=on') #format list flux/mag display
+    else:
+        script.append('&list.fluxsel=off')
+    if get_pms:
+        script.append('&list.pmsel=on')
+    else:
+        script.append('&list.pmsel=off')
+    if get_plx:
+        script.append('&list.plxsel=on')
+    else:
+        script.append('&list.plxsel=off')
+
     return ''.join(script)
 
 class CritQuery:
@@ -363,7 +378,12 @@ class CritQuery:
                         'dtype'  : default , # convert return data
                         'is_main': False   , # called from Main()
                         'mode'   : 'LIST'  , # Output mode
-                        'mx'     : 100       # Max number to return
+                        'mx'     : 100,       # Max number to return
+                        'get_coords'   : True,
+                        'get_fluxes'   : True,
+                        'get_pms'      : False,
+                        'get_plx'      : False,
+                        'get_spec_type': True
                     })
 
                 # assignments
@@ -373,11 +393,13 @@ class CritQuery:
                 self.is_main = self.options('is_main')
                 self.mode    = self.options('mode')
                 self.mx      = self.options('mx')
-
+                flx          = self.options('get_fluxes')
+                pms          = self.options('get_pms')
+                plx          = self.options('get_plx')
                 # query SIMBAD database
                 #with urlopen( Script(identifier, criteria) ) as response:
                 #    self.data = str( response.read().decode('utf-8') ).strip()
-                url=CritScript(criteria, self.mode, self.mx)
+                url=CritScript(criteria, self.mode, self.mx, flx,pms,plx)
                 response = urlopen( url )
                 self.data = str( response.read().decode('utf-8')).strip()
 
@@ -441,35 +463,57 @@ def CoordSearch(lng,lat,rad,**kwargs):
 
 
 class SimbadObject(object):
-    def __init__(self,info_string):
+    def __init__(self,info_string, header):
         data=[x.strip() for x in info_string.split('|')]
+        hdrs=[x.strip() for x in header.split('|')]
         coord_string=data[3]
         self.identifier=data[1].split('  ')[0]
         self.objecttype=data[2]
         self.ra=float(coord_string.split(' ')[0])
         self.dec=float(coord_string.split(' ')[1])
-        if data[4] == '~':
-            self.u=float('nan')
+        if 'pm' in hdrs:
+            pms=data[hdrs.index('pm')].split(' ')
+            self.pm_ra = float(pms[0])
+            self.pm_dec= float(pms[1])
         else:
-            self.u=float(data[4])
-        if data[5] == '~':
-            self.b=float('nan')
-        else:
-            self.b=float(data[5])
-        if data[6] == '~':
-            self.v=float('nan')
-        else:
-            self.v=float(data[6])
-        if data[7] == '~':
-            self.i=float('nan')
-        else:
-            self.i=float(data[7])
-        if data[8] == '~':
-            self.r=float('nan')
-        else:
-            self.r=float(data[8])
+            self.pm_ra = float('nan')
+            self.pm_dec= float('nan')
 
-        self.spectraltype=data[9]
+        if ('plx' in hdrs) and data[hdrs.index('plx')] != '~':
+            self.plx=float(data[hdrs.index('plx')])
+        else:
+            self.plx=float('nan')
+
+        if 'Mag V' in hdrs:
+            mag_start_idx=hdrs.index('Mag U')
+            if data[mag_start_idx] == '~':
+                self.umag=float('nan')
+            else:
+                self.umag=float(data[mag_start_idx])
+            if data[mag_start_idx+1] == '~':
+                self.bmag=float('nan')
+            else:
+                self.bmag=float(data[mag_start_idx+1])
+            if data[mag_start_idx+2] == '~':
+                self.vmag=float('nan')
+            else:
+                self.vmag=float(data[mag_start_idx+2])
+            if data[mag_start_idx+3] == '~':
+                self.imag=float('nan')
+            else:
+                self.imag=float(data[mag_start_idx+3])
+            if data[mag_start_idx+4] == '~':
+                self.rmag=float('nan')
+            else:
+                self.rmag=float(data[mag_start_idx+4])
+        else:
+            self.umag=float('nan')
+            self.bmag=float('nan')
+            self.vmag=float('nan')
+            self.imag=float('nan')
+            self.rmag=float('nan')
+
+        self.spectraltype=data[-1]
 
     def __repr__(self):
         return self.identifier
@@ -485,7 +529,12 @@ def CritSearch(critstring, **kwargs):
             {
                 'mx'       : 100,
                 'mode'     :'LIST',
-                'full'     : False
+                'full'     : False,
+                'get_coords'   : True,
+                'get_fluxes'   : True,
+                'get_pms'      : False,
+                'get_plx'      : False,
+                'get_spec_type': True
             })
         mode=opts('mode').upper()
         fulldata=opts('full')
@@ -501,11 +550,12 @@ def CritSearch(critstring, **kwargs):
             return []
         if (len(query.data) > 1):# >0 returned
             if query.data[5].split(' ')[0] == 'Number':# >1 returned as list, strip object names from list entries
+                header=query.data[7]
                 lst=[]
                 for entry in query.data:
                     if (len(entry) >0) and (entry[0].isdigit()):
                         #lst.append(entry.split('|')[1].split('  ')[0])
-                        lst.append(SimbadObject(entry))
+                        lst.append(SimbadObject(entry, header))
                 query.data=lst
                 return query()
             else:# 1 item return as object(instead of list), need to strip object name from data
