@@ -327,7 +327,7 @@ def CritScript(critstring, outputmode='list', mx=100):
     script = [
         'http://simbad.u-strasbg.fr/simbad/sim-sam?',
         'output.format=ASCII&list.idopt=CATLIST&list.idcat=HD', #select HD cat names
-        '&list.fluxsel=off&U=off&R=off&B=on&V=on', #format list flux/mag display
+        '&list.fluxsel=on&U=off&R=off&B=on&V=on', #format list flux/mag display
         '&list.bibsel=off&list.notesel=off&obj.bibsel=off&obj.notesel=off', #hide bib and notes
         '&coodisp1=[d][2]',#coordinate output format
         '&Criteria=',CritURLEncoded(critstring),
@@ -438,6 +438,44 @@ def CoordSearch(lng,lat,rad,**kwargs):
         query.data=lst
         return query()
 
+
+
+class SimbadObject(object):
+    def __init__(self,info_string):
+        data=[x.strip() for x in info_string.split('|')]
+        coord_string=data[3]
+        self.identifier=data[1].split('  ')[0]
+        self.objecttype=data[2]
+        self.ra=float(coord_string.split(' ')[0])
+        self.dec=float(coord_string.split(' ')[1])
+        if data[4] == '~':
+            self.u=float('nan')
+        else:
+            self.u=float(data[4])
+        if data[5] == '~':
+            self.b=float('nan')
+        else:
+            self.b=float(data[5])
+        if data[6] == '~':
+            self.v=float('nan')
+        else:
+            self.v=float(data[6])
+        if data[7] == '~':
+            self.i=float('nan')
+        else:
+            self.i=float(data[7])
+        if data[8] == '~':
+            self.r=float('nan')
+        else:
+            self.r=float(data[8])
+
+        self.spectraltype=data[9]
+
+    def __repr__(self):
+        return self.identifier
+    def __str__(self):
+        return self.identifier
+
 #If mode='COUNT', return integer number of hits
 #If mode='LIST', returns list of identifiers
 def CritSearch(critstring, **kwargs):
@@ -466,7 +504,8 @@ def CritSearch(critstring, **kwargs):
                 lst=[]
                 for entry in query.data:
                     if (len(entry) >0) and (entry[0].isdigit()):
-                        lst.append(entry.split('|')[1].split('  ')[0])
+                        #lst.append(entry.split('|')[1].split('  ')[0])
+                        lst.append(SimbadObject(entry))
                 query.data=lst
                 return query()
             else:# 1 item return as object(instead of list), need to strip object name from data
