@@ -57,11 +57,13 @@ class STISDataset:
         self.target=data[1]
         self.ra=float(data[2])
         self.dec=float(data[3])
-        self.exptime=float(data[4])
-        self.grating=data[5]
-        self.cenwav=float(data[6])
-        if len(data)==8:
-            self.angsep=float(data[7])
+        #self.starttime=float(data[4])
+        self.date,self.starttime=data[4].split()
+        self.exptime=float(data[5])
+        self.grating=data[6]
+        self.cenwav=float(data[7])
+        if len(data)==9:
+            self.angsep=float(data[8])
         else:
             self.angsep=float('nan')
 
@@ -263,7 +265,7 @@ def STISSearch(**kwargs):
     elif grating in ('E230H','E230M'):
         config='STIS/NUV-MAMA'
     critstring=''
-    critstring+='selectedColumnsCSV=sci_data_set_name,sci_targname,sci_ra,sci_dec,sci_actual_duration,sci_spec_1234,sci_central_wavelength,ang_sep&'
+    critstring+='selectedColumnsCSV=sci_data_set_name,sci_targname,sci_ra,sci_dec,sci_start_time,sci_actual_duration,sci_spec_1234,sci_central_wavelength,ang_sep&'
     critstring+='sci_instrume=STIS&sci_instrument_config='+config+'&sci_spec_1234='+grating+'&sci_status='+sci_status+'&sci_aec='+obs_type
     # Error checking search parameters
     if (ra != '' and dec == '') or (ra == '' and dec != ''):

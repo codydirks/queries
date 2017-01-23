@@ -23,6 +23,7 @@ These should be specific to the 'Attribute' being pointed to.
 from sys import argv, exit  # , version_info
 from urllib2 import urlopen, URLError
 from string import maketrans, digits
+import re
 
 from astropy import units as u
 
@@ -453,19 +454,35 @@ def CoordSearch(lng,lat,rad,**kwargs):
         return query()
     else:
         query.data=query.data.split('\n')
-        lst=[]
-        for entry in query.data:
-            if (len(entry) >0) and (entry[0].isdigit()):
-                lst.append(entry.split('|')[1].split('  ')[0])
-        query.data=lst
-        return query()
+        if (len(query.data) == 1):#No results returned
+            return []
+        if (len(query.data) > 1):# >0 returned
+            if query.data[5].split(' ')[0] == 'Number':# >1 returned as list, strip object names from list entries
+                return _convert_list_to_objects(query)
+            else:# 1 item return as object(instead of list), need to strip object name from data
+                return _convert_page_data_to_object(query)
 
 
 
-class SimbadObject(object):
-    def __init__(self,info_string, header):
-        data=[x.strip() for x in info_string.split('|')]
-        hdrs=[x.strip() for x in header.split('|')]
+class SimbadObject():
+    def __init__(self,list_info_string='', list_header=''):
+        if list_info_string=='' and list_header=='':
+            self.identifier=''
+            self.objecttype=''
+            self.ra=float('nan')
+            self.dec=float('nan')
+            self.pm_ra = float('nan')
+            self.pm_dec= float('nan')
+            self.plx=float('nan')
+            self.umag=float('nan')
+            self.bmag=float('nan')
+            self.vmag=float('nan')
+            self.rmag=float('nan')
+            self.imag=float('nan')
+            self.spectraltype=''
+            return
+        data=[x.strip() for x in list_info_string.split('|')]
+        hdrs=[x.strip() for x in list_header.split('|')]
         coord_string=data[3]
         self.identifier=data[1].split('  ')[0]
         self.objecttype=data[2]
@@ -515,6 +532,55 @@ class SimbadObject(object):
 
         self.spectraltype=data[-1]
 
+    # Function to parse the special case of Simbad returning a single item page
+    # instead of a list of results
+    def load_from_page_data(self, query_data):
+        self.umag=float('nan')
+        self.bmag=float('nan')
+        self.vmag=float('nan')
+        self.rmag=float('nan')
+        self.imag=float('nan')
+        for line in query_data:
+            if line.startswith('Object'):
+                obj_data=line.split('OID')[0].strip().split('---')
+                obj_id=obj_data[0].strip()[7:] # Removes prepended 'Object '
+                obj_type=obj_data[1].strip()
+                if obj_id.startswith('HD'):
+                    nums=re.compile(r'[^\d.]+')
+                    self.identifier='HD '+nums.sub('',obj_id.split()[1])
+                else:
+                    self.identifier=obj_id
+                print self.identifier
+                self.objecttype=obj_type
+            elif 'ICRS' in line:
+                coords=line.split(':')[1].split('(')[0].strip().split()
+                self.ra=float(coords[0])
+                self.dec=float(coords[1])
+            elif line.startswith('Proper motions'):
+                pms=line.split(':')[1].split('[')[0].strip().split()
+                if pms[0] != '~':
+                    self.pm_ra=float(pms[0])
+                if pms[1] != '~':
+                    self.pm_ra=float(pms[1])
+            elif line.startswith('Parallax'):
+                plx=line.split('[')[0].strip().split(':')[1].strip()
+                if plx != '~':
+                    self.plx=float(plx)
+            elif line.startswith('Flux') and len(line)>5:
+                band=line.split('[')[0][5]
+                if band=='U':
+                    self.umag=float(line.split('[')[0].strip().split(':')[1].strip())
+                elif band=='B':
+                    self.bmag=float(line.split('[')[0].strip().split(':')[1].strip())
+                elif band=='V':
+                    self.vmag=float(line.split('[')[0].strip().split(':')[1].strip())
+                elif band=='R':
+                    self.rmag=float(line.split('[')[0].strip().split(':')[1].strip())
+                elif band=='I':
+                    self.imag=float(line.split('[')[0].strip().split(':')[1].strip())
+            elif line.startswith('Spectral type'):
+                self.sptype=line.split(':')[1].strip().split()[0]
+
     def __repr__(self):
         return self.identifier
     def __str__(self):
@@ -550,23 +616,27 @@ def CritSearch(critstring, **kwargs):
             return []
         if (len(query.data) > 1):# >0 returned
             if query.data[5].split(' ')[0] == 'Number':# >1 returned as list, strip object names from list entries
-                header=query.data[7]
-                lst=[]
-                for entry in query.data:
-                    if (len(entry) >0) and (entry[0].isdigit()):
-                        #lst.append(entry.split('|')[1].split('  ')[0])
-                        lst.append(SimbadObject(entry, header))
-                query.data=lst
-                return query()
+                return _convert_list_to_objects(query)
             else:# 1 item return as object(instead of list), need to strip object name from data
-                dat=query.data[5].split(' ')
-                if dat[1] != 'HD':
-                    return [' '.join(dat[1:3])]
-                al=maketrans('','')
-                nodigs=al.translate(al,digits)
-                hdnum=' '.join(dat[1:3]).translate(al,nodigs)
-                query.data=['HD '+hdnum]
-                return query()
+                return _convert_page_data_to_object(query)
+
+def _convert_list_to_objects(query):
+    # Converts a returned query that contains a list of objects
+    # into a list of SimbadObjects
+    header=query.data[7]
+    lst=[]
+    for entry in query.data:
+        if (len(entry) >0) and (entry[0].isdigit()):
+            #lst.append(entry.split('|')[1].split('  ')[0])
+            lst.append(SimbadObject(entry, header))
+    query.data=lst
+    return query()
+
+def _convert_page_data_to_object(query):
+    obj=SimbadObject()
+    obj.load_from_page_data(query.data)
+    query.data=obj
+    return query()
 
 def Main( clargs ):
     """
