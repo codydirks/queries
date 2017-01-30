@@ -550,7 +550,6 @@ class SimbadObject():
                     self.identifier='HD '+nums.sub('',obj_id.split()[1])
                 else:
                     self.identifier=obj_id
-                print self.identifier
                 self.objecttype=obj_type
             elif 'ICRS' in line:
                 coords=line.split(':')[1].split('(')[0].strip().split()
