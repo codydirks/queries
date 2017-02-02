@@ -540,6 +540,7 @@ class SimbadObject():
         self.vmag=float('nan')
         self.rmag=float('nan')
         self.imag=float('nan')
+        self.sptype='~'
         for line in query_data:
             if line.startswith('Object'):
                 obj_data=line.split('OID')[0].strip().split('---')
