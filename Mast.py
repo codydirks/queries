@@ -1,6 +1,7 @@
 from sys import stdout,argv, exit  # , version_info
-from urllib2 import urlopen, URLError
-from cStringIO import StringIO
+from urllib.request import urlopen
+from urllib.error import URLError
+from io import StringIO
 import gzip
 
 #from astropy import units as u
@@ -77,21 +78,21 @@ class MastQuery:
         if type(instrument) is not str and type(criteria) is not str:
             raise MastError('Mast.MastQuery function expects str types for arguments.')
         try:
-			self.options = Options(kwargs,
-                {
+            self.options = Options(kwargs,
+                    {
                     'parse'  : True    , # parse SIMBAD return file
                     'full'   : False   , # return full line of info
                     'dtype'  : default , # convert return data
                     'is_main': False
-				})
-			self.parse   = self.options('parse')
-			self.full    = self.options('full')
-			self.dtype   = self.options('dtype')
-			self.is_main = self.options('is_main')
-			url=MastScript(instrument,criteria)
-			#print url
-			response=urlopen(url)
-			self.data = str( response.read().decode('utf-8')).strip()
+                    })
+            self.parse   = self.options('parse')
+            self.full    = self.options('full')
+            self.dtype   = self.options('dtype')
+            self.is_main = self.options('is_main')
+            url=MastScript(instrument,criteria)
+            #print url
+            response=urlopen(url)
+            self.data = str( response.read().decode('utf-8')).strip()
 
         except OptionsError as err:
             print('\n --> OptionsError:', err.msg )

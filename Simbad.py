@@ -21,8 +21,9 @@ The **kwargs is the conventional reference to Python keyword arguments.
 These should be specific to the 'Attribute' being pointed to.
 """
 from sys import argv, exit  # , version_info
-from urllib2 import urlopen, URLError
-from string import maketrans, digits
+from urllib.request import urlopen
+from urllib.error import URLError
+from string import digits
 import re
 
 from astropy import units as u
@@ -283,7 +284,7 @@ def BVFluxes(identifier, **kwargs):
             vf=float(v)
         query.data = [bf,vf]
     if query.is_main:
-        print query()
+        print(query())
     else:
         return query()
 
@@ -292,7 +293,7 @@ def ObjType(identifier, **kwargs):
     if query.parse:
         query.data=query.data.split('\n')[-1]
     if query.is_main:
-        print query()
+        print(query())
     else: return query()
 
 
@@ -618,7 +619,7 @@ def CritSearch(critstring, **kwargs):
             if query.data[5].split(' ')[0] == 'Number':# >1 returned as list, strip object names from list entries
                 return _convert_list_to_objects(query)
             else:# 1 item return as object(instead of list), need to strip object name from data
-                return _convert_page_data_to_object(query)
+                return [_convert_page_data_to_object(query)]
 
 def _convert_list_to_objects(query):
     # Converts a returned query that contains a list of objects
